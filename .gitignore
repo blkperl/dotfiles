@@ -1,0 +1,9 @@
+*.swp
+.htoprc
+.profile
+.pulse-cookie
+.pulse/
+.ssh/
+.vim/
+.viminfo
+puppet*
