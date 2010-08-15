@@ -16,3 +16,11 @@ anaconda-ks.cfg
 install.log
 install.log.syslog
 .gitconfig
+.htoprc
+.profile
+.pulse-cookie
+.pulse/
+.ssh/
+.vim/
+.viminfo
+puppet*

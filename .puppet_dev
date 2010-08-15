@@ -1,0 +1,5 @@
+# Export this to work on puppet/facter source code
+# add a source of .puppet_dev to your bashrc
+
+export PATH=/root/puppet/bin:/root/puppet/sbin:/root/facter/bin:/root/facter/sbin:$PATH
+export RUBYLIB=/root/puppet/lib
