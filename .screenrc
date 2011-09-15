@@ -1,0 +1,11 @@
+# keep plenty of scrollback
+defscrollback  4096
+
+# look & feel
+activity   "Activity in window %n (%t)"
+hardstatus on
+hardstatus alwayslastline
+hardstatus string "%{= Kd} %=  %-Lw%{= wk}%n%f %t %{= Kd}%+Lw %=  %D %d %M %Y %c:%s%{-}"
+#                  [C----] [L] [I---------------------------] [R] [T------------------]
+
+
