@@ -1,5 +1,37 @@
 [user]
-	name = William Van Hevelingen
-	email = wvan13@gmail.com
-[core]
-	editor = vim
+  name = William Van Hevelingen
+  email = blkperl@cat.pdx.edu
+
+[alias]
+    lo        = log --pretty=fuller --graph
+    st        = status
+    co        = checkout
+    b         = branch  
+    ba        = branch -all
+    ci        = commit
+    unstage   = reset HEAD --
+    last      =log -1 HEAD
+[color]
+    ui = true
+
+
+[color]
+  branch = auto
+  diff = auto
+  status = auto
+
+[color "branch"]
+  current = yellow reverse
+  local = yellow
+  remote = green
+
+[color "diff"]
+  meta = yellow bold
+  frag = magenta bold
+  old = red bold
+  new = green bold
+
+[color "status"]
+  added = yellow
+  changed = green
+  untracked = cyan
