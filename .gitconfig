@@ -2,23 +2,24 @@
   name = William Van Hevelingen
   email = blkperl@cat.pdx.edu
 
-[alias]
-    lo        = log --pretty=fuller --graph
-    st        = status
-    co        = checkout
-    b         = branch  
-    ba        = branch -all
-    ci        = commit
-    unstage   = reset HEAD --
-    last      =log -1 HEAD
-[color]
-    ui = true
+[core]
+  editor = vim
 
+[alias]
+  lo        = log --pretty=fuller --graph
+  st        = status
+  co        = checkout
+  b         = branch  
+  ba        = branch -all
+  ci        = commit
+  unstage   = reset HEAD --
+  last      =log -1 HEAD
 
 [color]
   branch = auto
   diff = auto
   status = auto
+  ui = true
 
 [color "branch"]
   current = yellow reverse
