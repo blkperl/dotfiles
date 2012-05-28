@@ -1,125 +1,208 @@
-# Path to your oh-my-zsh configuration.
-# export ZSH=$HOME/.oh-my-zsh
-# source $ZSH/oh-my-zsh.sh
+#!/usr/bin/zsh
 
-# Set to this to use case-sensitive completion
-export CASE_SENSITIVE="true"
+#=============================================================================
+# ENVIRONMENT-SPECIFIC STUFF
+#=============================================================================
+#[ -e "/pkgs/pkgs/PKGSsh" ] && . "/pkgs/pkgs/PKGSsh"
 
-# Completion
-unsetopt menu_complete   # do not autoselect the first completion entry
-unsetopt flowcontrol
-setopt auto_menu         # show completion menu on succesive tab press
-setopt complete_in_word
-setopt always_to_end
+#=============================================================================
+# SANITIZATION
+#=============================================================================
+[ -d "$HOME/.zsh" ] || mkdir "$HOME/.zsh"
 
-# MacPorts Installer addition: adding an appropriate PATH variable for use with MacPorts.
-export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-# Finished adapting your PATH environment variable for use with MacPorts.
 
-WORDCHARS=''
+#=============================================================================
+# ZSH OPTIONS
+#=============================================================================
 
-autoload -U compinit
-compinit -i
+setopt prompt_subst
+setopt transient_rprompt
+setopt appendhistory
 
-zmodload -i zsh/complist
+autoload -Uz vcs_info
+autoload -U compinit; compinit
+autoload colors; colors
 
-## case-insensitive (all),partial-word and then substring completion
-if [ "x$CASE_SENSITIVE" = "xtrue" ]; then
-  zstyle ':completion:*' matcher-list 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
-  unset CASE_SENSITIVE
-else
-  zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
-fi
+bindkey -v
 
-zstyle ':completion:*' list-colors ''
+typeset -ga chpwd_functions
+typeset -ga precmd_functions
+typeset -ga preexec_functions
 
-# should this be in keybindings?
-bindkey -M menuselect '^o' accept-and-infer-next-history
 
-zstyle ':completion:*:*:*:*:*' menu select
-zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-]#)*=01;34=0=01'
-zstyle ':completion:*:*:*:*:processes' command "ps -u `whoami` -o pid,user,comm -w -w"
+#=============================================================================
+# VARIABLES
+#=============================================================================
 
-# Load known hosts file for auto-completion with ssh and scp commands
-if [ -f ~/.ssh/known_hosts ]; then
-  zstyle ':completion:*' hosts $( sed 's/[, ].*$//' $HOME/.ssh/known_hosts )
-  zstyle ':completion:*:*:(ssh|scp):*:*' hosts `sed 's/^\([^ ,]*\).*$/\1/' ~/.ssh/known_hosts`
-fi
+# set some colors
+for COLOR in RED GREEN BLUE YELLOW WHITE BLACK CYAN; do
+    eval PR_$COLOR='%{$fg[${(L)COLOR}]%}'
+    eval PR_BRIGHT_$COLOR='%{$fg_bold[${(L)COLOR}]%}'
+done
 
-# Uncomment following line if you want to disable colors in ls
-# export DISABLE_LS_COLORS="true"
+PR_RST="%{${reset_color}%}"
+PR_RESET="%{%b%s%u$reset_color%}"
+PR_BG="%{%(?.$PR_RESET.%S)%}"
 
-#source ~/.sh_shared
-# source ~/.sh_aliases
+CAPTION=`hostname | sed 's/\..*//'`
 
-# Will return the current branch name
-# Usage example: git pull origin $(current_branch)
-function current_branch() {
-  ref=$(git symbolic-ref HEAD 2> /dev/null) || return
-  echo ${ref#refs/heads/}
+export HISTFILE=$HOME/.zsh/history
+export HISTSIZE=1000
+export SAVEHIST=1000
+export BLOCKSIZE=K
+export EDITOR=vim
+export PAGER=less
+export CLICOLOR="YES"
+export LSCOLORS="ExGxFxdxCxDxDxhbadExEx"
+export GEM_HOME=$HOME/local/lib/ruby/gems/1.8
+export GEM_PATH=$HOME/local/lib/ruby/gems/1.8:/usr/local/lib/ruby/gems/1.8
+export GEM_PATH=$GEM_PATH:/usr/local/lib/ruby/gems/1.8
+export GEM_PATH=$GEM_PATH:/var/lib/gems/1.8
+
+
+#=============================================================================
+# ALIASES
+#=============================================================================
+[ `uname` = "Linux" ] && alias ls='ls --color'
+alias homegit="git --git-dir=$HOME/.homegit --work-tree=$HOME"
+alias sshadd='eval `loadkey`'
+alias ldapvi="ldapvi -D uid=blkperl,ou=People,dc=catnip -h ldap.cat.pdx.edu"
+alias dater="date '+%Y/%m/%d %H:%M:%S %Z'"
+
+
+#=============================================================================
+# PATH
+#=============================================================================
+PATH=$PATH:$HOME/local/bin:/local/sbin       # Add local bindirs
+PATH=$PATH:/cat/bin                          # CAT environment bindir
+PATH=$PATH:$HOME/local/lib/ruby/gems/1.8/bin # Local rubygem bindir
+
+
+#=============================================================================
+# GIT
+#=============================================================================
+
+# set formats
+# %b - branchname
+# %u - unstagedstr (see below)
+# %c - stangedstr (see below)
+# %a - action (e.g. rebase-i)
+# %R - repository path
+# %S - path in the repository
+FMT_BRANCH="${PR_GREEN}%b%u%c${PR_RST}" # e.g. master
+FMT_ACTION="(${PR_CYAN}%a${PR_RST}%)"   # e.g. (rebase-i)
+FMT_PATH="%R${PR_YELLOW}/%S"            # e.g. ~/repo/subdir
+
+# check-for-changes can be really slow.
+# you should disable it, if you work with large repositories
+zstyle ':vcs_info:*:prompt:*' check-for-changes true
+zstyle ':vcs_info:*:prompt:*' unstagedstr   '?'  # display ? if there are unstaged changes
+zstyle ':vcs_info:*:prompt:*' stagedstr     '!'  # display ! if there are staged changes
+zstyle ':vcs_info:*:prompt:*' actionformats "${FMT_BRANCH}${FMT_ACTION}"  "${FMT_PATH}"
+zstyle ':vcs_info:*:prompt:*' formats       "${FMT_BRANCH}"               "${FMT_PATH}"
+zstyle ':vcs_info:*:prompt:*' nvcsformats   ""                             "%~"
+
+# called before command excution
+# here we decide if we should update the prompt next time
+function zsh_git_prompt_preexec {
+  case "$(history $HISTCMD)" in
+    *git*)
+      PR_GIT_UPDATE=1
+      ;;
+  esac
 }
 
-## Command history configuration
-HISTFILE=$HOME/.zsh_history
-HISTSIZE=1000000
-SAVEHIST=1000000
-setopt hist_ignore_dups # ignore duplication command history list
-#setopt share_history # share command history data # use fc -IR to share
-
-setopt hist_verify
-setopt inc_append_history
-setopt extended_history
-setopt hist_expire_dups_first
-setopt hist_ignore_space
-
-# get the name of the branch we are on
-function git_prompt_info() {
-  ref=$(git symbolic-ref HEAD 2> /dev/null) || return
-  echo "$ZSH_THEME_GIT_PROMPT_PREFIX${ref#refs/heads/}$(parse_git_dirty)$ZSH_THEME_GIT_PROMPT_SUFFIX"
+# called after directory change
+# we just assume that we have to update git prompt
+function zsh_git_prompt_chpwd {
+  PR_GIT_UPDATE=1
 }
 
-parse_git_dirty () {
-  if [[ -n $(git status -s 2> /dev/null) ]]; then
-    echo "$ZSH_THEME_GIT_PROMPT_DIRTY"
-  else
-    echo "$ZSH_THEME_GIT_PROMPT_CLEAN"
+# called before prompt generation
+# if needed, we will update the prompt info
+function zsh_git_prompt_precmd {
+  if [[ -n "$PR_GIT_UPDATE" ]] ; then
+    vcs_info 'prompt'
+    PR_GIT_UPDATE=
   fi
 }
 
-# Setup the prompt with pretty colors
-setopt prompt_subst
-# ls colors
-autoload colors; colors;
-export LSCOLORS="Gxfxcxdxbxegedabagacad"
+# update the vcs_info_msg_ magic variables, but only as little as possible
+# This variable dictates weather we are going to do the git prompt update
+# before printing the next prompt.  On some setups this saves 10s of work.
+PR_GIT_UPDATE=1
 
-# PROMPT PS1
-local red_op="%{$fg[red]%}[%{$reset_color%}"
-local red_cp="%{$fg[red]%}]%{$reset_color%}"
-local path_p="${red_op}%{$fg[green]%}%~${red_cp}"
-local user_host="${red_op}%{$fg[cyan]%}%n@%m${red_cp}"
-local date_time="${red_op}%{$fg[green]%}%D{%Y%m%d} - %T${red_cp}"
-local rvm_prompt_info=`~/.rvm/bin/rvm-prompt`
-PROMPT='╭─${path_p}─${user_host}─${date_time}-$(git_prompt_info)$(~/.rvm/bin/rvm-prompt i v p g)
-╰─ %# '
-local cur_cmd="${red_op}%_${red_cp}"
-PROMPT2="${cur_cmd}> "
-# git theming default: Variables for theming the git info prompt
-ZSH_THEME_GIT_PROMPT_PREFIX="%{$fg[yellow]%}‹"
-ZSH_THEME_GIT_PROMPT_SUFFIX="› %{$reset_color%}"
-ZSH_THEME_GIT_PROMPT_DIRTY="*"              # Text to display if the branch is dirty
-ZSH_THEME_GIT_PROMPT_CLEAN=""               # Text to display if the branch is clean
+preexec_functions+='zsh_git_prompt_preexec'
+chpwd_functions+='zsh_git_prompt_chpwd'
+precmd_functions+='zsh_git_prompt_precmd'
 
-# Setup the prompt with pretty colors
-setopt prompt_subst
+#=============================================================================
+# VI NORMAL/INSERT MODE CHANGE
+#=============================================================================
 
-# helper for writing my own completions
-zstyle ':completion:*' verbose yes
-zstyle ':completion:*:descriptions' format '%B%d%b'
-zstyle ':completion:*:messages' format '%d'
-zstyle ':completion:*:warnings' format 'No matches for: %d'
-zstyle ':completion:*' group-name ''
+PR_VIMODE="#"
+PR_VICOLOR=${PR_BLUE}
+function zle-line-init zle-keymap-select {
+  PR_VIMODE="${${KEYMAP/vicmd/¢}/(main|viins)/%%}"
+  PR_VICOLOR="${${KEYMAP/vicmd/${PR_RED}}/(main|viins)/${PR_GREEN}}"
+  zle reset-prompt
+}
+zle -N zle-line-init
+zle -N zle-keymap-select
 
-# load rvm (Ruby Version Manager)
-if [[ -s ~/.rvm/scripts/rvm ]] ; then source ~/.rvm/scripts/rvm ; fi
 
-compdef _git hub
+#=============================================================================
+# PROMPT
+#=============================================================================
+
+function rprompt {
+    local brackets=$1
+    local color1=$2
+    local color2=$3
+
+    local git='${vcs_info_msg_0_}'
+
+    local bracket_open="${color1}${brackets[1]}${PR_RESET}"
+    local bracket_close="${color1}${brackets[2]}${PR_RESET}"
+
+    RPROMPT="${bracket_open}${git}${bracket_close}"
+}
+
+function lprompt {
+    local brackets=$1
+    local color1=$2
+    local color2=$3
+
+    local bracket_open="${color1}${brackets[1]}${PR_RESET}"
+    local bracket_close="${color1}${brackets[2]}${PR_RESET}"
+    local colon="${color1}:${PR_RESET}"
+    local at="${color1}@${PR_RESET}"
+
+    local user_host="${color2}%n${at}${color2}%m${PR_RESET}"
+    local vcs_cwd='${${vcs_info_msg_1_%%.}/$HOME/~}'
+    local cwd="${color2}%B%40<..<${vcs_cwd}%<<%b${PR_RESET}"
+    local inner="${user_host}${colon}${cwd}"
+
+    local vimode='${PR_VIMODE}'
+    local vicol='${PR_VICOLOR}'
+
+    PROMPT="${bracket_open}${inner}${bracket_close}${PR_RESET} ${vicol}${vimode}${PR_RESET} "
+}
+
+function zsh_prompt_set_rprompt {
+  if [ ! -z "${vcs_info_msg_0_}" ] ; then
+    rprompt '()' $PR_BRIGHT_BLACK $PR_WHITE
+  else
+    rprompt '  ' $PR_BRIGHT_BLACK $PR_WHITE
+  fi
+}
+
+function screen_caption() { 
+  echo -ne "\033k$CAPTION\033\\"
+}
+
+precmd_functions+='zsh_prompt_set_rprompt'
+[ "$TERM" = "screen" ] && precmd_functions+='screen_caption'
+
+lprompt '[]' $PR_BRIGHT_BLACK $PR_WHITE
+zsh_prompt_set_rprompt
